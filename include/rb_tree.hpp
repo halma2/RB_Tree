@@ -27,8 +27,7 @@ template <class T> class rb_tree {
     node() : parent(this), left(this), right(this), color(black), key() {}
 
     // Konstruktor csúcs létrehozására beszúráskor
-    node(const T &k, node *p)
-        : parent(p), left(empty_leaf), right(empty_leaf), color(red), key(k) {}
+    node(const T &k, node *p) : parent(p), left(empty_leaf), right(empty_leaf), color(red), key(k) {}
   };
 
   // Adattagok
@@ -219,7 +218,7 @@ template <class T> void rb_tree<T>::_rotate_right(node *x) {
 
 // Beszúrás utáni kiegyensúlyozás
 // A beszúrt piros csúcsra kell meghívni
-template <class T> void rb_tree<T>::_rebalance_after_insert(node * /*x*/) {
+template <class T> void rb_tree<T>::_rebalance_after_insert(node * x) {
   // x: problemas node - (piros szulo) piros gyermeke
   // u: x nagybacsija
   // p: szulo
@@ -235,52 +234,132 @@ template <class T> void rb_tree<T>::_rebalance_after_insert(node * /*x*/) {
 
   // A while ciklus minden egyes lefutasara egy adott szinten tortenik
   // a PF fa tulajdonsagok helyreallitasa.
+  while (x->parent->color != red) { //A gyoker szuloje fekete
+      if (x->parent == x->parent->parent->left) {
+          node * u = x->parent->parent->right;
 
-  // 1. eset:
-  //    -- elofeltetel  : u PIROS
-  //    -- kovetkezmeny : g PIROS , p FEKETE , u FEKETE
-  //                      Ket szintel feljebb lepve kezdjuk elorol a 1. esettol
+          // 1. eset:
+          //    -- elofeltetel  : u PIROS
+          //    -- kovetkezmeny : g PIROS , p FEKETE , u FEKETE
+          //                      Ket szintel feljebb lepve kezdjuk elorol a 1. esettol
+          if (u->color == red) {
+              x->parent->parent->color = red;
+              x->parent->color = u->color = black;
+              x = x->parent->parent;
+              continue;
+          }
 
-  // 2. eset:
-  //    -- elofeltetel  : u FEKETE , x JOBB gyermek
-  //    -- kovetkezmeny : x BAL gyermek
+          // 2. eset:
+          //    -- elofeltetel  : u FEKETE , x JOBB gyermek
+          //    -- kovetkezmeny : x BAL gyermek
+          if (x->parent->right == x) {
+              x = x->parent;
+              _rotate_left(x);
+          }
+          // 3. eset:
+          //    -- elofeltetel  : u FEKETE , x BAL gyermek
+          //    -- kovetkezmeny : a PF fa tulajdonsagai helyrealltak
+          x->parent->color = black;
+          x->parent->parent->color = red;
+          _rotate_right(x->parent->parent);
 
-  // 3. eset:
-  //    -- elofeltetel  : u FEKETE , x BAL gyermek
-  //    -- kovetkezmeny : a PF fa tulajdonsagai helyrealltak
+      }
+      else {
+          node * u = x->parent->parent->left;
+
+          // 1. eset:
+          //    -- elofeltetel  : u PIROS
+          //    -- kovetkezmeny : g PIROS , p FEKETE , u FEKETE
+          //                      Ket szintel feljebb lepve kezdjuk elorol a 1. esettol
+          if (u->color == red) {
+              x->parent->parent->color = red;
+              x->parent->color = u->color = black;
+              x = x->parent->parent;
+              continue;
+          }
+
+          // 2. eset:
+          //    -- elofeltetel  : u FEKETE , x JOBB gyermek
+          //    -- kovetkezmeny : x BAL gyermek
+          if (x->parent->left == x) {
+              x = x->parent;
+              _rotate_right(x);
+          }
+          // 3. eset:
+          //    -- elofeltetel  : u FEKETE , x BAL gyermek
+          //    -- kovetkezmeny : a PF fa tulajdonsagai helyrealltak
+          x->parent->color = black;
+          x->parent->parent->color = red;
+          _rotate_left(x->parent->parent);
+      }
+  }
+  root->color = black;
 }
 
 // Törlés utáni utáni kiegyensúlyozás
 // A kivágott csúcs gyerekére kell meghívni, amely most
 // piros-fekete vagy kétszeresen fekete.
-template <class T> void rb_tree<T>::_rebalance_after_remove(node * /*x*/) {
+template <class T> void rb_tree<T>::_rebalance_after_remove(node * x) {
   // x: problemas node (DUPLA FEKETE)
   // w: x testvere
 
   // A while ciklus minden egyes lefutasara egy adott szinten tortenik
   // a PF fa tulajdonsagok helyreallitasa.
-  //
-  // Felfele haladunk. Ha elerunk egy piros nodot, vagy a gyokeret,
-  // akkor vegeztunk a helyreallitassal.
+  while (x != root && x->color != red) {
+      // Felfele haladunk. Ha elerunk egy piros nodot, vagy a gyokeret,
+      // akkor vegeztunk a helyreallitassal.
+      if (x == x->parent->left) {
+          node * w = x->parent->right;
 
-  // 1. eset
-  //    -- elofeltetel  : w->color == red   [a testver PIROS]
-  //    -- kovetkezmeny : w->color == black [a testver FEKETE] (2. eset, 3.
-  //    eset vagy 4. eset)
+          // 1. eset
+          //    -- elofeltetel  : w->color == red   [a testver PIROS]
+          //    -- kovetkezmeny : w->color == black [a testver FEKETE] (2. eset, 3.
+          //    eset vagy 4. eset)
+          if (w->color == red){
+              w->color = black;
+              x->parent->color = red;
+              _rotate_left(x->parent);
+              w = x->parent->right;
+          }
 
-  // 2. eset
-  //    -- elofeltetel  : w es w mindket gyermeke FEKETE
-  //    -- kovetkezmeny : a duple fekete eggyel feljebb propagal,
-  //                      ezen a szinten nincs tobb keresnivalonk
-  //                      Elorol az egeszet a x->parent node-al.
+          // 2. eset
+          //    -- elofeltetel  : w es w mindket gyermeke FEKETE
+          //    -- kovetkezmeny : a duple fekete eggyel feljebb propagal,
+          //                      ezen a szinten nincs tobb keresnivalonk
+          //                      Elorol az egeszet a x->parent node-al.
+          if (w->left->color == w->right->color == black){
+              w->color = red;
 
-  // 3. eset
-  //    -- elofeltetel  : w FEKETE , w->left PIROS , w->right FEKETE
-  //    -- kovetkezmeny : w FEKETE , w->left ????? , w->right PIROS   (4. eset)
+              //tovaba x megszunik ketszeres feketetenek lenni,
+              //mert a tobbi feketet megkapja
 
-  // 4. eset: w fekete, w->right
-  //    -- elofeltetel  : w FEKETE , w->right PIROS
-  //    -- kovetkezmeny : a PF fa tulajdonsagai helyrealltak
+              x = x->parent;
+              continue;
+          }
+
+          // 3. eset
+          //    -- elofeltetel  : w FEKETE , w->left PIROS , w->right FEKETE
+          //    -- kovetkezmeny : w FEKETE , w->left ????? , w->right PIROS   (4. eset)
+          if (w->right == black){
+              w->right = red;
+              w->left->color = black;
+              _rotate_right(w);
+              w = x->parent->right;
+          }
+
+          // 4. eset: w fekete, w->right
+          //    -- elofeltetel  : w FEKETE , w->right PIROS
+          //    -- kovetkezmeny : a PF fa tulajdonsagai helyrealltak
+          if (w->color == black && w->right == red){
+              x->parent->color = w->left->color = black;
+              //kiegészytésre szorul
+          }
+      } else{
+          node * w =( x->parent->left);
+
+      }
+  }
+  x->color = black;
 }
 
 // Lekérdezi, hogy található-e k kulcs a fában.
@@ -384,20 +463,26 @@ template <class T> size_t rb_tree<T>::_validate(node *x) {
 
   // "Minden csúcs színe piros vagy fekete."
   // TODO
+  if (x->color != red && x->color != black)
+      throw invalid_rb_tree("Se nem piros, s nem fekete!");
   // throw invalid_rb_tree("se nem piros se nem fekete csucs.");
 
   // "Minden piros csúcs mindkét gyereke fekete."
   // TODO
-
+  if (x->color == red && x->parent->color == red)
+      throw invalid_rb_tree("Piros csucsnak piros gyereke van.");
   // Rekurzív ellenőrzés és fekete-magasság meghatározása
   // TODO
-
+  size_t left_black_height = _validate(x->left);
+  size_t right_black_height = _validate(x->right);
   // "Bármely gyökértől levélig vezető úton
   // a fekete csúcsok száma egyenlő."
   // TODO
-
+  if (left_black_height != right_black_height)
+      throw invalid_rb_tree("A fekete magassag kulonbozik a ket oldalon.");
   // Visszaadjuk a részfa fekete-magasságát
   // return left_black_height + (x->color == black);
+  return left_black_height + (x->color == black);//hozzaadjuk az x-et, ha az fekete
 }
 
 // Ez a függvény a debugolást segíti.
